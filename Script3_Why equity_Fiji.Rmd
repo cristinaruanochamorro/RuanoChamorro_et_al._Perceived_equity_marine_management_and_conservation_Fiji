@@ -1,0 +1,533 @@
+---
+title: "Why equity_26.10.22"
+author: ""
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#####Load packages
+
+```{r}
+
+#load packages
+
+#library(tidyverse) #there is an error with tidyverse
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(devtools)
+library(stats)
+library(MASS)
+library(knitr) #for kable
+
+```
+
+
+#Arranging data set
+
+Data 2016, treatment and control communities.
+
+Change name of the data set
+
+#```{r}
+
+data_fiji_why<-fiji_PES_corrected_columns_2_cat_DE_PE_V5
+#```
+```{r}
+
+data_fiji_why<- read.csv ("fiji_PES_corrected columns_2_cat_DE_PE_V5.csv",
+                     header=TRUE,
+                    dec=".")
+
+```
+
+###Distributional equity
+
+
+```{r}
+str(data_fiji_why$Why_de_cat_4)
+```
+
+```{r}
+dim(data_fiji_why)
+```
+
+```{r}
+table<-xtabs(~Why_de_cat_4+Distr_Eq_Impact, data=data_fiji_why)
+ftable(table)
+table2<-ftable(table)
+```
+Repeated refers to repeated reponses for other response variables (procedural equity). Repetitions of distributional equity are not included in "repeated". here is a total of 4 repetitions in distributional equity.
+
+
+
+```{r}
+which(is.na(data_fiji_why$Why_de_cat_4))
+```
+68 answered na? CHECK 
+
+```{r}
+data_fiji_why$Distr_Eq_Impact<-as.factor(data_fiji_why$Distr_Eq_Impact)
+```
+
+
+```{r}
+data_fiji_why$Distr_Eq_Impact<-data_fiji_why$Distr_Eq_Impact
+```
+```{r}
+data_fiji_why$Why_de_cat_4_fact<-as.factor(data_fiji_why$Why_de_cat_4)
+```
+
+
+Eliminate NA and don't knows (including 6), and noanswer
+```{r}
+data_fiji_why_de <- data_fiji_why[data_fiji_why$Distr_Eq_Impact!=6,]
+
+data_fiji_why_de <- data_fiji_why_de[data_fiji_why_de$Distr_Eq_Impact!=7,]
+
+data_fiji_why_de <- data_fiji_why_de[data_fiji_why_de$Distr_Eq_Impact!="dontknow",]
+
+data_fiji_why_de<- data_fiji_why_de[data_fiji_why_de$Distr_Eq_Impact!="noanswer",]
+
+
+data_fiji_why_de <- data_fiji_why_de[data_fiji_why_de$Distr_Eq_Impact!="na",]
+
+data_fiji_why_de<- data_fiji_why_de[data_fiji_why_de$Distr_Eq_Impact!="Repeated",]
+
+data_fiji_why_de<- data_fiji_why_de[data_fiji_why_de$Why_de_cat_4_fact!="Repeated",]
+
+```
+
+```{r}
+data_fiji_why_de$Distr_Eq_Impact_cat<-as.factor(data_fiji_why_de$Distr_Eq_Impact)
+```
+```{r}
+data_fiji_why_de<-data_fiji_why_de[!is.na(data_fiji_why_de$Why_de_cat_4),]#eliminate NAs from $Why_de_cat_2
+```
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_group<-factor(data_fiji_why_de$Why_de_cat_4_fact)
+
+```
+
+```{r}
+data_fiji_why_de<- data_fiji_why_de[data_fiji_why_de$Why_de_cat_4_fact!="na",]
+```
+
+```{r}
+data_fiji_why_de<- data_fiji_why_de[data_fiji_why_de$Why_de_cat_4_fact!="DK",]
+```
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_fact<-recode_factor(data_fiji_why_de$Why_de_cat_4_fact, "Compliance"  =  "Good Compliance")
+```
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_fact<-recode_factor(data_fiji_why_de$Why_de_cat_4_fact, "Resource income"  =  "Income benefit")
+```
+
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_fact<-recode_factor(data_fiji_why_de$Why_de_cat_4_fact, "Process properties"  =  "Transparency & accountability")
+```
+
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_fact<-recode_factor(data_fiji_why_de$Why_de_cat_4_fact, "Poor enforcement"  =  "Poor management quality")
+```
+
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_fact<-recode_factor(data_fiji_why_de$Why_de_cat_4_fact, "Good performace"  =  "Good management quality")
+```
+
+```{r}
+data_fiji_why_de$Why_de_cat_4_fact<-recode_factor(data_fiji_why_de$Why_de_cat_4_fact, "Oher"  =  "Other")
+```
+
+```{r}
+ggplot(data_fiji_why_de, aes(Why_de_cat_4_fact, fill=Distr_Eq_Impact_cat))+geom_bar()+ theme(axis.text.x = element_text(angle = 90))
+```
+```{r}
+why_de_df<- group_by(data_fiji_why_de) %>%
+             mutate(group_size = n()) %>%
+             group_by(Why_de_cat_4_fact, Distr_Eq_Impact_cat) %>%
+             summarise(perc = n()/max(group_size))
+  
+  
+```
+
+```{r}
+why_de_df
+```
+
+
+
+
+```{r}
+
+ggplot(why_de_df, aes(x = Why_de_cat_4_fact, fill = factor(Distr_Eq_Impact_cat), y = perc)) +
+  geom_bar(stat = "identity") +
+  
+ theme(axis.text.x = element_text(angle = 90))+coord_flip()+theme_classic()+scale_fill_manual(values=c("1"= "#CC0033", 
+                             "2"= "#FF6699", 
+                             "3"= "#999999",
+                             "4" = "#CCCCFF",
+                             "5" = "#6699FF"))+theme(
+  
+  axis.text.y = element_text(size = 10))
+```
+```{r}
+data_fiji_why_de$Why_de_cat_4_group<-factor(data_fiji_why_de$Why_de_cat_4_fact, levels = c("Poor compliance", "Poor management quality", "Poor participation", "Reduced resource access women", "Reduced resource access","Resource non-sustainability","Costs","Distribution inequality","Other","Good Compliance","Good management quality", "Transparency & accountability", "Participation", "Future generations","Income benefit",  "Food benefit" ,  "Cultural benefit","Benefits", "Resource sustainability", "Distributional equality", "Community benefit (public good)"))
+
+```
+
+```{r}
+why_de_df_g<-data_fiji_why_de %>%
+             mutate(group_size = n()) %>%
+             group_by(Why_de_cat_4_group, Distr_Eq_Impact_cat) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+
+
+```{r}
+ggplot(why_de_df_g, aes(x = Why_de_cat_4_group, fill = factor(Distr_Eq_Impact_cat), y = perc)) +
+  geom_bar(stat = "identity")  +
+ theme(axis.text.x = element_text(angle = 90))+coord_flip()+theme_classic()+scale_fill_manual(values=c("1"= "#CC0033", 
+                             "2"= "#FF6699", 
+                             "3"= "#999999",
+                             "4" = "#CCCCFF",
+                             "5" = "#6699FF"))+theme(
+  
+  axis.text.y = element_text(size = 10))+ scale_y_continuous(limits = c(0, 22))
+```
+figure= 700x500
+
+```{r}
+why_de_df<-data_fiji_why_de %>%
+             mutate(group_size = n()) %>%
+             group_by(Why_de_cat_4_group) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+```{r}
+why_de_df
+  
+  
+```
+
+
+
+Difference between women and men
+
+
+
+
+```{r}
+why_de_df_gendif_perc<- group_by(data_fiji_why_de , Gender) %>%# here we calculate the percentage of women of all women  who mentioned X category (women #respondents are 100%, and the same for men)
+             mutate(group_size = n()) %>%
+             group_by(Gender, Why_de_cat_4_group) %>%
+             summarise(perc = n()/max(group_size))
+```
+```{r}
+why_de_df_gendif_perc
+```
+
+```{r}
+ggplot(why_de_df_gendif_perc, aes(x = Why_de_cat_4_group, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+
+```{r}
+why_de_df_gendif_perc2<-data_fiji_why_de %>%
+             mutate(group_size = n()) %>%
+             group_by(Gender, Why_de_cat_4_group) %>%
+             summarise(perc = n()/max(group_size))
+  
+  
+```
+
+
+
+```{r}
+why_de_df_gendif_perc2
+```
+```{r}
+ggplot(why_de_df_gendif_perc2, aes(x = Why_de_cat_4_group, y = perc,fill=Gender)) + #here all respondents are 100%
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+
+
+
+```{r}
+why_de_df_gendif2_perc<-why_de_df_gendif_perc2%>%
+  pivot_wider(names_from=Gender, values_from=perc,values_fill = 0)
+```
+
+
+
+```{r}
+why_de_df_gendif2_perc$gend_dif<-(why_de_df_gendif2_perc$f-why_de_df_gendif2_perc$m)*100
+```
+
+```{r}
+ggplot(why_de_df_gendif2_perc, aes(x = Why_de_cat_4_group, y = gend_dif)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()+ scale_y_continuous(limits = c(-5, 5))
+```
+
+```{r}
+why_de_df_gendif2_perc$Why_de_cat_4_group<-factor(why_de_df_gendif2_perc$Why_de_cat_4_group, levels = c( "Poor compliance", "Poor management quality", "Poor participation", "Reduced resource access women", "Reduced resource access","Resource non-sustainability","Costs","Distribution inequality","Other","Good Compliance","Good management quality", "Transparency & accountability", "Participation", "Future generations","Income benefit",  "Food benefit" ,  "Cultural benefit","Benefits", "Resource sustainability", "Distributional equality", "Community benefit (public good)"))
+
+```
+
+```{r}
+ggplot(why_de_df_gendif2_perc, aes(x = Why_de_cat_4_group, y = gend_dif)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()+ scale_y_continuous(limits = c(-5, 5))
+```
+
+
+
+
+
+#Procedural equity
+
+```{r}
+ggplot(data_fiji_why, aes(Why_PJ3))+geom_bar()+ theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "No transparency and accountability"  =  "No transparency & accountability")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Transparency and accountability"  =  "Transparency & accountability")
+```
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Benefit cultural"  =  "Cultural benefit")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Economic benefit"  =  "Income benefit")
+```
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Benefit income"  =  "Income benefit")
+```
+ "Benefit income" 
+ "Benefit cultural" 
+ 
+   
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Poor enforcement"  =  "Poor management quality")
+```
+  
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Poor performance"  =  "Poor management quality")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Appropiate rules"  =  "Other")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Appropiate governance process"  =  "Other")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Innapropiate governance process"  =  "Other")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Innappropiate rules"  =  "Other")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Women agency"  =  "Participation")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "Individual agency"  =  "Participation")
+```
+
+```{r}
+data_fiji_why$Why_PJ3<-recode_factor(data_fiji_why$Why_PJ3, "No Participation"  =  "Poor participation")
+```
+Eliminate NA and don't knows (including 6), and noanswer
+```{r}
+data_fiji_why_pe <- data_fiji_why[data_fiji_why$Proced_Equity!=6,]
+
+data_fiji_why_pe <- data_fiji_why_pe[data_fiji_why_pe$Proced_Equity!=7,]
+
+data_fiji_why_pe <- data_fiji_why_pe[data_fiji_why_pe$Proced_Equity!="dontknow",]
+
+data_fiji_why_pe<- data_fiji_why_pe[data_fiji_why_pe$Proced_Equity!="noanswer",]
+
+
+data_fiji_why_pe <- data_fiji_why_pe[data_fiji_why_pe$Proced_Equity!="na",]
+
+data_fiji_why_pe<- data_fiji_why_pe[data_fiji_why_pe$Proced_Equity!="Repeated",]
+
+data_fiji_why_pe<- data_fiji_why_pe[data_fiji_why_pe$Why_PJ3!="Repeated",]
+
+```
+
+```{r}
+ggplot(data_fiji_why, aes(Why_PJ3))+geom_bar()+ theme(axis.text.x = element_text(angle = 90))
+```
+```{r}
+data_fiji_why_pe$Why_PJ3_fact<-as.factor(data_fiji_why_pe$Why_PJ3)
+```
+
+```{r}
+ggplot(data_fiji_why_pe, aes(Why_PJ3_fact))+geom_bar()+ theme(axis.text.x = element_text(angle = 90))
+```
+
+   
+```{r}
+data_fiji_why_pe<-data_fiji_why_pe[!is.na(data_fiji_why_pe$Why_PJ3_fact),]#eliminate NAs 
+```
+
+
+
+```{r}
+ggplot(data_fiji_why_pe, aes(Why_PJ3_fact))+geom_bar()+ theme(axis.text.x = element_text(angle = 90))
+```
+```{r}
+data_fiji_why_pe<- data_fiji_why_pe[data_fiji_why_pe$Why_PJ3!="DK",]
+```
+   
+   
+```{r}
+why_pe_df<-data_fiji_why_pe %>%
+             mutate(group_size = n()) %>%
+             group_by(Why_PJ3_fact, Proced_Equity) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+
+```{r}
+ggplot(why_pe_df, aes(x = Why_PJ3_fact, fill = factor(Proced_Equity), y = perc)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90))+coord_flip()+theme_classic()+scale_fill_manual(values=c("1"= "#CC0033", 
+                             "2"= "#FF6699", 
+                             "3"= "#999999",
+                             "4" = "#CCCCFF",
+                             "5" = "#6699FF"))+theme(
+  
+  axis.text.y = element_text(size = 10))+ scale_y_continuous(limits = c(0, 15))
+```  
+
+  
+  
+
+```{r}
+levels(why_pe_df$Why_PJ3_fact)
+```
+
+```{r}
+why_pe_df$Why_PJ3_fact<-factor(why_pe_df$Why_PJ3_fact, levels = c("Poor management quality", "Poor compliance","No neutrality","No transparency & accountability" ,"Poor participation","Resource non-sustainability" ,  "Reduced resource access women","Costs", "Distribution inequality"  ,"Other", "Compliance"  ,"Interpersonal treatment","Transparency & accountability"   , "Leaders respected & trusted" ,"leaders decision-maker", "Community agreements","Participation","Education and knowledge", "Future generations", "Income benefit"  ,  "Food benefit","Cultural benefit",  "Benefits" , "Resource sustainability","Resource access women","Reduced resource access","Distributional equality" ,"Community benefit (public good)" ))
+
+```
+
+
+```{r}
+ggplot(why_pe_df, aes(x = Why_PJ3_fact, fill = factor(Proced_Equity), y = perc)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90))+coord_flip()+theme_classic()+scale_fill_manual(values=c("1"= "#CC0033", 
+                             "2"= "#FF6699", 
+                             "3"= "#999999",
+                             "4" = "#CCCCFF",
+                             "5" = "#6699FF"))+theme(
+  
+  axis.text.y = element_text(size = 12))
+``` 
+
+```{r}
+why_pe_df_gen<- group_by(data_fiji_why_pe, Gender) %>%
+             mutate(group_size = n()) %>%
+             group_by(Gender,Why_PJ3_fact) %>%
+             summarise(perc = n()/max(group_size))
+  
+  
+```
+
+```{r}
+why_pe_df_gen
+  
+  
+```
+
+```{r}
+why_pe_df$Why_PJ3_fact<-factor(why_pe_df$Why_PJ3_fact, levels = c("Poor management quality", "Poor compliance","No neutrality","No transparency & accountability" ,"Poor participation","Resource non-sustainability" ,  "Reduced resource access women","Costs", "Distribution inequality"  ,"Other", "Compliance"  ,"Interpersonal treatment","Transparency & accountability"   , "Leaders respected & trusted" ,"leaders decision-maker", "Community agreements","Participation","Education and knowledge", "Future generations", "Income benefit"  ,  "Food benefit","Cultural benefit",  "Benefits" , "Resource sustainability","Resource access women","Reduced resource access","Distributional equality" ,"Community benefit (public good)" ))
+
+```
+
+```{r}
+ggplot(why_pe_df_gen, aes(x = Why_PJ3_fact, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+```{r}
+why_pe_df_gen2<-data_fiji_why_pe %>%
+             mutate(group_size = n()) %>%
+             group_by(Gender, Why_PJ3_fact) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+
+```{r}
+why_pe_df_gen2
+```
+
+```{r}
+why_pe_df_gen2$Why_PJ3_fact<-factor(why_pe_df_gen2$Why_PJ3_fact, levels = c("Poor management quality", "Poor compliance","No neutrality","No transparency & accountability" ,"Poor participation","Resource non-sustainability" ,  "Reduced resource access women","Costs", "Distribution inequality"  ,"Other", "Compliance"  ,"Interpersonal treatment","Transparency & accountability"   , "Leaders respected & trusted" ,"leaders decision-maker", "Community agreements","Participation","Education and knowledge", "Future generations", "Income benefit"  ,  "Food benefit","Cultural benefit",  "Benefits" , "Resource sustainability","Resource access women","Reduced resource access","Distributional equality" ,"Community benefit (public good)" ))
+
+```
+```{r}
+ggplot(why_pe_df_gen2, aes(x = Why_PJ3_fact, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+```{r}
+why_pe_df_gen2<-why_pe_df_gen2[!is.na(why_pe_df_gen2$Why_PJ3_fact),]#eliminate NAs 
+```
+
+
+```{r}
+why_pe_df_gen2_gm<-why_pe_df_gen2%>%
+  pivot_wider(names_from=Gender, values_from=perc, values_fill = 0)
+```
+
+```{r}
+why_pe_df_gen2_gm
+```
+
+
+```{r}
+why_pe_df_gen2_gm$gend_dif<-(why_pe_df_gen2_gm$f-why_pe_df_gen2_gm$m)
+```
+
+```{r}
+ggplot(why_pe_df_gen2_gm, aes(x = Why_PJ3_fact, y = gend_dif)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 12))+coord_flip()+theme_classic()+ scale_y_continuous(limits = c(-5, 5))
+```

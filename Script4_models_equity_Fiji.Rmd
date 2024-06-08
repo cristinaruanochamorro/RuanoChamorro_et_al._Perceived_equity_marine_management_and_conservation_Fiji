@@ -1,0 +1,2380 @@
+---
+title: "Cumulative Bayesian model Fiji chapter final"
+author: ""
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#####Load packages
+
+```{r}
+#load packages
+
+#library(tidyverse) #there is an error with tidyverse
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(devtools)
+library(stats)
+library(ordinal)
+library(MASS)
+library(ggeffects)
+library(effects)
+library(scales)
+library(car) #for regression diagnostics
+library(broom) #for tidy output
+library(ggfortify) #for model diagnostics
+#library(sjPlot) #for outputs
+library(knitr) #for kable
+library(effects) #for partial effects plots
+library(MuMIn) #for interfacing with STAN
+library(emmeans) #for estimating marginal means
+library(ggeffects) #for partial effects plots
+library(MASS) #for glm.nb
+library(MuMIn) #for AICc
+library(DHARMa) #for residual diagnostics plots
+library(modelr) #for auxillary modelling functions
+library(performance) #for residuals diagnostics
+library(see) #for plotting residuals
+library(patchwork) #for grids of plots
+library(brms)
+library(bayesplot)
+library(coda)
+library(ggmcmc)
+library(broom) #for tidying outputs
+library(tidybayes) #for more tidying outputs
+library(broom.mixed)#for summarising models
+library(knitr)
+
+```
+
+
+#Arranging data set
+
+Data 2016, treatment and control communities.
+
+Change name of the data set
+
+
+```{r}
+
+data_fiji<- read.csv ("Fiji_data_notabu_2016.4.csv",
+                     header=TRUE,
+                    dec=".")
+
+```
+
+Transform variables into factors (District, control/treatment)
+
+
+```{r}
+data_fiji$village<-as.factor(data_fiji$village) #village as factor
+
+dim(data_fiji) # n=193
+```
+
+
+
+COVARIATES:
+
+AGE
+
+```{r}
+#Age (nominal)
+
+str(data_fiji$Age)
+
+ggplot(data_fiji,aes(Age))+geom_bar()
+
+data_fiji$Age_num<-as.numeric(as.character(data_fiji$Age)) 
+
+hist(data_fiji$Age_num) 
+```
+
+
+
+MIGRANT 
+
+```{r}
+#Migrant status (Categorical)
+
+str(data_fiji$Migrant)
+
+#transform in factor
+data_fiji$Migrant<-as.factor(data_fiji$Migrant)
+str(data_fiji$Migrant)
+
+#Combine Migrant levels 2,3 and 4
+
+data_fiji$Migrant<-as.numeric(as.character( data_fiji$Migrant))
+str(data_fiji$Migrant)
+
+data_fiji$migrant2 <- as.factor(ifelse(data_fiji$Migrant > 1,2,1)) 
+
+
+```
+
+
+```{r}
+
+data_fiji$Gender<-as.factor(data_fiji$Gender)
+
+
+```
+
+
+```{r}
+#Marital status
+
+str(data_fiji$Marital_status)
+
+data_fiji$Marital_status<-as.factor(data_fiji$Marital_status)
+
+
+```
+
+
+
+```{r}
+#Education 
+
+str(data_fiji$Education)
+
+data_fiji$Education<-as.factor(data_fiji$Education)
+str(data_fiji$Education)
+
+data_fiji$Education_num<-as.factor(ifelse(data_fiji$Education == "Primary",1,
+                                                   ifelse(data_fiji$Education=="Secondary",2,
+                                                          ifelse(data_fiji$Education=="Tertiary",3,0))))
+
+
+data_fiji$Education_num<-as.numeric(as.character(data_fiji$Education_num))
+
+str(data_fiji$Education_num)
+
+#Transform in Primary, secondary and tertiary
+
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary-F5" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary-F6" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary - F1" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary - F4" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "primary" = "Primary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "secondary"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "tertiary"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 4"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 3"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 5"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 6"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 7"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 2"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 5"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 6"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 7"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "class 7"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "class 5"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "class 8"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 8"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "0"= "None")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Intermediate"= "Primary") 
+levels(data_fiji$Education)
+ggplot(data_fiji,aes(Education))+geom_bar()
+
+
+```
+
+
+
+We will combine none and primary because there are very few people with no education
+```{r}
+data_fiji$Education_cat3<-as.factor(ifelse(data_fiji$Education == "Tertiary",3,
+                                                   ifelse(data_fiji$Education=="Secondary",2,1)))
+                                                          
+
+
+```
+
+
+Wealth
+
+I have calculated wealth using all assets and chose the one with loading factors higher than 0.4 (Gurney and Darling 2017. A Global Social-Ecological Systems Monitoring Framework for Coastal Fisheries Management: A Practical Monitoring Handbook)
+
+
+Loading factor is how much each variable is correlated to axis 1.
+
+
+calculate wealth (Material lifestyle)
+
+
+```{r}
+#dvd
+str(data_fiji$dvd)
+data_fiji$dvd<-as.factor(data_fiji$dvd)
+which(is.na(data_fiji$dvd))
+
+
+#washing
+str(data_fiji$washing)
+data_fiji$washing<-as.factor(data_fiji$washing)
+which(is.na(data_fiji$washing))
+#computer
+str(data_fiji$computer)
+data_fiji$computer<-as.factor(data_fiji$computer)
+which(is.na(data_fiji$computer))
+#fridge
+str(data_fiji$fridge)
+data_fiji$fridge<-as.factor(data_fiji$fridge)
+which(is.na(data_fiji$fridge))
+#tv
+str(data_fiji$tv)
+data_fiji$tv<-as.factor(data_fiji$tv)
+which(is.na(data_fiji$tv))
+#satellite
+str(data_fiji$satellite)
+data_fiji$satellite<-as.factor(data_fiji$satellite)
+data_fiji<-data_fiji%>% 
+  mutate(satellite=na_if(satellite, "no answer"))
+which(is.na(data_fiji$satellite))#187 is missing
+
+
+#recode rest of the variables
+
+data_fiji$dvd<-recode_factor(data_fiji$dvd,"y" ="1")
+data_fiji$dvd<-recode_factor(data_fiji$dvd,"n" ="0")
+
+data_fiji$smartphone<-recode_factor(data_fiji$smartphone,"y" ="1")
+data_fiji$smartphone<-recode_factor(data_fiji$smartphone,"n" ="0")
+
+data_fiji$washing<-recode_factor(data_fiji$washing,"y" ="1")
+data_fiji$washing<-recode_factor(data_fiji$washing,"n" ="0")
+
+data_fiji$fridge<-recode_factor(data_fiji$fridge,"y" ="1")
+data_fiji$fridge<-recode_factor(data_fiji$fridge,"n" ="0")
+
+data_fiji$tv<-recode_factor(data_fiji$tv,"y" ="1")
+data_fiji$tv<-recode_factor(data_fiji$tv,"n" ="0")
+
+data_fiji$satellite<-recode_factor(data_fiji$satellite,"y" ="1")
+data_fiji$satellite<-recode_factor(data_fiji$satellite,"n" ="0")
+
+#transform variable into numeric vars
+data_fiji$dvd<-as.numeric(as.character(data_fiji$dvd))
+which(is.na(data_fiji$dvd))
+data_fiji$washing<-as.numeric(as.character(data_fiji$washing))
+which(is.na(data_fiji$washing))
+data_fiji$fridge<-as.numeric(as.character(data_fiji$fridge))
+which(is.na(data_fiji$fridge))
+data_fiji$tv<-as.numeric(as.character(data_fiji$tv))
+which(is.na(data_fiji$tv))
+data_fiji$satellite<-as.numeric(as.character(data_fiji$satellite))
+which(is.na(data_fiji$satellite)) #missing 187
+
+
+#PCA 18 only have one missing value.
+
+data_fiji<-data_fiji[-c(187),]
+wealth_rows_pca18.2= data_fiji[, c("dvd", "washing","fridge","tv", "satellite")]
+xord18.2<-prcomp(wealth_rows_pca18.2, center= TRUE, scale=TRUE)
+
+summary(xord18.2)
+
+biplot(xord18.2)
+
+
+loadings18.2<-xord18.2$rotation #rotation is the matrix of variable loadings (columns are eigenvectors) in prcomp() function
+loadings18.2 
+
+
+
+#extract pc1
+
+
+myscores.2<-xord18.2$x # "x" are the coordinates of the individuals (observations) on the principal components in prcomp()
+
+data_fiji$wealth_msl.2<-myscores.2[,"PC1"] #add this to fiji_data and add na to the empty cells
+
+data_fiji$wealth_msl.2
+
+
+
+str(data_fiji$wealth_msl.2)
+
+data_fiji$wealth_msl.2_sc.1<-scale( data_fiji$wealth_msl.2, center = TRUE,scale=TRUE)
+
+
+data_fiji$wealth_msl.2.resc<- rescale(data_fiji$wealth_msl.2, to = c(0,1)) #rescale
+
+
+
+```
+
+
+```{r}
+data_fiji$wealth2<-data_fiji$wealth_msl.2.resc
+```
+
+
+```{r}
+#gender (Gender) 
+str(data_fiji$Gender)
+#marital status
+str(data_fiji$Marital_status)
+#age (Age)
+str(data_fiji$Age_num)
+#migrant status (migrant2)
+str(data_fiji$migrant2)
+#education (Education)
+str(data_fiji$Education)
+str(data_fiji$Education_cat3)
+#wealth
+str(data_fiji$wealth_msl.2)
+str(data_fiji$wealth2)
+
+```
+
+
+
+Standardize continuous variables
+
+
+```{r}
+
+# Scale all "numerical" variables from 0 to 1
+#migrant: binomial
+
+
+data_fiji$wealth2_sd <- scale(data_fiji$wealth2)*0.5
+data_fiji$Age_num_sd <- scale(data_fiji$Age_num)*0.5
+
+```
+
+
+RESPONSE VARIABLES
+
+I am going to create a data set for procedural equity and another one for distributional equity to avoid the elimnations of nas in procedural equity resulting from nas occuring only in disributional equity and viceversa.
+
+DISTRIBUTIONAL EQUITY
+
+
+```{r}
+ggplot(data_fiji, aes(Distr_Eq_Impact))+geom_bar()
+```
+
+
+Eliminate NA and don't knows (including 6), and noanswer
+```{r}
+data_fiji_dist <- data_fiji[data_fiji$Distr_Eq_Impact!=6,]
+
+data_fiji_dist <- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!="dontknow",]
+
+data_fiji_dist<- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!="noanswer",]
+
+which(is.na(data_fiji_dist$Distr_Eq_Impact))
+
+data_fiji_dist <- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!="na",]
+
+```
+
+```{r}
+ggplot(data_fiji_dist, aes(Distr_Eq_Impact))+geom_bar()
+```
+
+
+```{r}
+ggplot(data_fiji_dist, aes(Distr_Eq_Impact,fill=Gender))+geom_bar()+theme_classic()
+  
+
+```
+```{r}
+table<-xtabs(~Distr_Eq_Impact+migrant2+Gender, data=data_fiji_dist)
+ftable(table)
+table2<-ftable(table)
+```
+
+
+```{r}
+dim(data_fiji_dist)#number of observations
+```
+
+```{r}
+which(is.na(data_fiji_dist$Age_num_sd))#checking which rows contains NAs
+
+```
+
+
+There in 1 NA in age withing data_fiji_dist.
+
+```{r}
+data_fiji_dist<-data_fiji_dist[-c(43),]#eliminate row with NA
+```
+```{r}
+dim(data_fiji_dist)#number of observations. N=159 for Distributional equity
+```
+
+```{r}
+str(data_fiji_dist$Distr_Eq_Impact)
+```
+
+
+
+```{r}
+data_fiji_dist$Distr_Eq_Impact_int<-as.integer(data_fiji_dist$Distr_Eq_Impact)
+```
+
+```{r}
+str(data_fiji_dist$Distr_Eq_Impact_int)
+```
+
+
+
+PROCEDURAL EQUITY
+
+```{r}
+ggplot(data_fiji, aes(Proced_Equity))+geom_bar()
+```
+
+Eliminate NA and don't knows (including 6), and noanswer
+```{r}
+data_fiji_proced <- data_fiji[data_fiji$Proced_Equity!=6,]
+
+data_fiji_proced <- data_fiji_proced[data_fiji_proced$Proced_Equity!="dontknow",]
+
+data_fiji_proced<- data_fiji_proced[data_fiji_proced$Proced_Equity!="noanswer",]
+
+which(is.na(data_fiji_proced$Proced_Equity))
+
+data_fiji_proced<- data_fiji_proced[data_fiji_proced$Proced_Equity!="na",]
+
+```
+
+
+```{r}
+ggplot(data_fiji_proced, aes(Proced_Equity))+geom_bar()
+```
+
+```{r}
+dim(data_fiji_proced)#N=168 for Procedural Equity
+```
+
+
+
+```{r}
+str(data_fiji_proced$Proced_Equity)
+```
+```{r}
+data_fiji_proced$Proced_Equity_int<-as.integer(data_fiji_proced$Proced_Equity)
+```
+
+```{r}
+str(data_fiji_proced$Proced_Equity_int)
+```
+
+
+
+#### DISTRIBUTIONAL EQUITY
+
+
+Reference categories: We will chose those with more responses (migrant1, females, married, secondary education). We only have to change the reference category for Education, because the other ones are already set.
+
+
+```{r}
+data_fiji_dist<- within(data_fiji_dist, Education_cat3 <- relevel(Education_cat3, ref = 2)) #set secondary education as the reference category as it has more counts
+
+```
+
+```{r}
+data_fiji_dist$Distr_Eq_int<-data_fiji_dist$Distr_Eq_Impact_int
+```
+
+```{r}
+data_fiji_dist$Distr_Eq_int_cat<-as.factor(data_fiji_dist$Distr_Eq_int)
+
+```
+
+Bayesian (brms package)
+
+
+The cumulative model assumes that the effect of a predictor is equal across the rating categories (e.g. the effect of marital status is the same across the levels of distributional equity). However, this assumption may not be appropriate, and marital status may impact rating categories differently. If the effects of predictors vary across rating categories, we call the resulting model to have category specific (cs) effects. 
+
+
+Checking proportional odds assumption with brms 
+
+(https://discourse.mc-stan.org/t/proportional-odds-assumptions/5316)
+
+We need to investigate if each predictor has category specific effects. In order to do this we use an adjacent category model which uses the family=acat() instead of family=cumulative() (Burkner and Vuorre xx Ordinal regression models in psychology: a tutorial  https://psyarxiv.com/x8swp/).
+
+
+
+# Additive model
+
+```{r}
+#M.de5_add<-brm(Distr_Eq_int~Gender+migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ #(1|village),data=data_fiji_dist,family=cumulative("logit"),control = list(adapt_delta = 0.99))  
+
+```
+
+```{r}
+#saveRDS(M.de5_add,file="M.de5_add.rda")
+```
+
+```{r}
+M.de5_add<-readRDS(file="M.de5_add.rda")
+```
+
+
+```{r}
+prior_summary(M.de5_add)# check default priors
+```
+
+
+
+
+Add weakly informative priors.
+
+Weakly informative priors
+```{r}
+priors2 <-prior(normal(0, 2.5), class = "b")+
+  prior(normal(0, 2.5), class = "Intercept")+
+  prior(student_t(3,0,2), class = "sd")
+  
+```
+
+
+Modelling cs(Education_cat3) does not work.We will model it without specific categories for education
+
+#```{r }
+M.de5_acat_all_noed<-brm(bf(Distr_Eq_int~cs(Gender)+cs(migrant2)+Education_cat3+cs(wealth2_sd)+cs(Age_num_sd)+cs(Marital_status)+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=acat("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+
+```{r}
+#saveRDS(M.de5_acat_all_noed,file="M.de5_acat_all_noed.rda")
+```
+
+```{r}
+M.de5_acat_all_noed<-readRDS(file="M.de5_acat_all_noed.rda")
+```
+
+
+```{r}
+loo.M.de5_acat_all_noed<-loo(M.de5_acat_all_noed)
+```
+```{r}
+M.de5_acat_all2<-readRDS(file="M.de5_acat_all2.rda")
+```
+
+
+
+```{r}
+loo.M.de5_acat_all2<-loo(M.de5_acat_all2)
+```
+
+
+#```{r }
+M.de5_acat_all2<-brm(bf(Distr_Eq_int~Gender+migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=acat("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+```{r}
+#saveRDS(M.de5_acat_all2,file="M.de5_acat_all2.rda")
+```
+
+```{r}
+M.de5_acat_all2<-readRDS(file="M.de5_acat_all2.rda")
+```
+
+
+
+```{r}
+loo.M.de5_acat_all2<-loo(M.de5_acat_all2)
+```
+
+
+ Additive model
+
+#```{r additive model2, cashe=TRUE}
+M.de5_add_2<-brm(bf(Distr_Eq_int~Gender+migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+#```{r}
+saveRDS(M.de5_add_2,file="M.de5_add_2.rda")
+#```
+
+
+
+```{r}
+M.de5_add_2<-readRDS(file="M.de5_add_2.rda")
+```
+
+
+
+```{r}
+pars <- M.de5_add_2%>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.de5_add_2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.de5_add_2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_dist$Distr_Eq_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.de5_add_2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.de5_add_2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.de5_add_2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.de5_add_2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.de5_add_2<- as.array(M.de5_add_2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.de5_add_2,ndraws=250,summary=FALSE)
+
+M.de5_add_2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_dist$Distr_Eq_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.de5_add_2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.de5_add_2)
+```
+
+
+
+```{r}
+loo.M.de5_add_2<-loo(M.de5_add_2)
+```
+
+
+```{r}
+loo.M.de5_add_2
+```
+
+
+Compare cumulative and acat
+
+```{r}
+loo_compare(loo.M.de5_add_2,loo.M.de5_acat_all2,loo.M.de5_acat_all_noed)
+```
+
+
+
+
+# Gender x Migrant
+
+#```{r genderxmigrant model2, cashe=TRUE}
+M.de5_int.mig2<-brm(bf(Distr_Eq_int~Gender*migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+#```{r}
+saveRDS(M.de5_int.mig2,file="M.de5_int.mig2.rda")
+#```
+
+```{r}
+M.de5_int.mig2<-readRDS(file="M.de5_int.mig2.rda")
+```
+
+
+
+```{r}
+pars <- M.de5_int.mig2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.de5_int.mig2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.de5_int.mig2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_dist$Distr_Eq_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.de5_int.mig2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.de5_int.mig2 %>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.de5_int.mig2 %>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.de5_int.mig2 %>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.de5_int.mig2<- as.array(M.de5_int.mig2)
+```
+
+
+```{r}
+mcmc_acf(posterior_M.de5_int.mig2, 
+         pars = c("b_Intercept[1]","b_Intercept[2]","b_Intercept[3]","b_Intercept[4]", "b_Genderm", "b_migrant22", "b_Education_cat31","b_Education_cat33", "b_wealth2_sd","b_Age_num_sd","b_Marital_statuss","b_Marital_statusw"))
+         
+```
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.de5_int.mig2,ndraws=250,summary=FALSE)
+
+M.de5_int.mig2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_dist$Distr_Eq_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.de5_int.mig2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.de5_int.mig2)
+```
+
+
+```{r}
+mcmc_intervals(posterior_M.de5_int.mig2, prob = 0.8, # 80% intervals
+  prob_outer = 0.95, # 95%
+  point_est = "mean"
+,pars = c("b_Genderm", "b_migrant22", "b_Education_cat31","b_Education_cat33", "b_wealth2_sd","b_Age_num_sd","b_Marital_statuss","b_Marital_statusw","b_Genderm:migrant22"))
+```
+
+
+
+Conditional effects:
+
+
+
+Ploting the interaction
+
+```{r}
+conditions <- data.frame(Gender = c("f","m"))
+                                       
+```
+```{r}
+conditional_effects(M.de5_int.mig2, "migrant2", prob=0.95,
+                        categorical=TRUE, conditions=conditions) #re_formula=NULL takes into account random effects
+                                       
+```
+
+
+
+```{r}
+inter_plot<-conditional_effects(M.de5_int.mig2, "migrant2", prob=0.95,
+                        categorical=TRUE, conditions=conditions) #re_formula=NULL takes into account random effects
+                                       
+```
+
+```{r}
+plot1<- plot(inter_plot, plot = FALSE)[[1]] + ##ggplot object
+  theme_classic()+scale_color_manual(values = c("1"= "darkred", 
+                             "2"= "red3", 
+                             "3"= "grey61",
+                             "4" = "steelblue2",
+                             "5" = "royalblue4")) +
+  labs(x="Migrant Status")+
+  theme(axis.text=element_text(size=10),
+        axis.title=element_text(size=15),
+        legend.text=element_text(size=10),
+        legend.title=element_text(size=10))+
+  scale_fill_discrete(labels = c("Very unfair", "Unfair", "Neutral","Fair", "Very fair"))
+  
+```
+
+```{r}
+plot1
+```
+
+```{r}
+inter_plot.80<-conditional_effects(M.de5_int.mig2, "migrant2", prob=0.80,
+                        categorical=TRUE, conditions=conditions) #re_formula=NULL takes into account random effects
+                                       
+```
+
+
+
+```{r}
+plot2<- plot(inter_plot.80, plot = FALSE)[[1]] + ##ggplot object
+  theme_classic()+scale_color_manual(values = c("1"= "darkred", 
+                             "2"= "red3", 
+                             "3"= "grey61",
+                             "4" = "steelblue2",
+                             "5" = "royalblue4")) +
+  labs(x="Migrant Status")+
+  theme(axis.text=element_text(size=10),
+        axis.title=element_text(size=15),
+        legend.text=element_text(size=10),
+        legend.title=element_text(size=10))
+  
+```
+
+```{r}
+plot2
+```
+
+Change colors
+```{r}
+plot1
+```
+```{r}
+plot1<- plot(inter_plot, plot = FALSE)[[1]] + ##ggplot object
+  theme_classic()+scale_color_manual(values = c("1"= "#CC0033", 
+                             "2"= "#FF6699", 
+                             "3"= "#CCCCCC",
+                             "4" = "#CCCCFF",
+                             "5" = "#6699FF")) +
+  labs(x="Migrant Status")+
+  theme(axis.text=element_text(size=10),
+        axis.title=element_text(size=15),
+        legend.text=element_text(size=10),
+        legend.title=element_text(size=10))
+  
+```
+
+```{r}
+plot1
+```
+
+
+```{r}
+loo.M.de5_int.mig2<-loo(M.de5_int.mig2)
+```
+
+
+```{r}
+loo.M.de5_int.mig2
+```
+
+
+## Gender x marital status
+
+
+
+#```{r M.de5_int.marital2, cashe=TRUE}
+M.de5_int.marital3<-brm(bf(Distr_Eq_int~Gender*Marital_status+Education_cat3+wealth2_sd+Age_num_sd+migrant2+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+#```
+
+
+
+#```{r}
+saveRDS(M.de5_int.marital3,file="M.de5_int.marital3.rda")
+#```
+
+
+```{r}
+M.de5_int.marital3<-readRDS(file="M.de5_int.marital3.rda")
+```
+
+```{r}
+M.de5_int.marital2<-M.de5_int.marital3
+```
+
+
+```{r}
+pars <- M.de5_int.marital2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.de5_int.marital2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.de5_int.marital2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_dist$Distr_Eq_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.de5_int.marital2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.de5_int.marital2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.de5_int.marital2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.de5_int.marital2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.de5_int.marital2<- as.array(M.de5_int.marital2)
+```
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.de5_int.marital2,ndraws=250,summary=FALSE)
+
+M.de5_int.marital2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_dist$Distr_Eq_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.de5_int.marital2.resids) #residuals look good
+
+
+```
+
+
+
+
+```{r}
+summary(M.de5_int.marital2)
+```
+
+
+
+```{r}
+loo.M.de5_int.marital2<-loo(M.de5_int.marital2)
+```
+
+
+```{r}
+loo.M.de5_int.marital2
+```
+
+# Gender x education
+
+
+#```{r M.de5_int.edu2, cashe=TRUE}
+M.de5_int.edu2<-brm(bf(Distr_Eq_int~Gender*Education_cat3+Marital_status+wealth2_sd+Age_num_sd+migrant2+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+```{r}
+#saveRDS(M.de5_int.edu2,file="M.de5_int.edu2.rda")
+```
+
+```{r}
+M.de5_int.edu2<-readRDS(file="M.de5_int.edu2.rda")
+```
+
+
+
+
+```{r}
+pars <- M.de5_int.edu2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.de5_int.edu2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.de5_int.edu2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_dist$Distr_Eq_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.de5_int.edu2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.de5_int.edu2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.de5_int.edu2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.de5_int.edu2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.de5_int.edu2<- as.array(M.de5_int.edu2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.de5_int.edu2,ndraws=250,summary=FALSE)
+
+M.de5_int.edu2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_dist$Distr_Eq_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.de5_int.edu2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.de5_int.edu2)
+```
+
+
+
+```{r}
+loo.M.de5_int.edu2<-loo(M.de5_int.edu2)
+```
+
+
+```{r}
+loo.M.de5_int.edu2
+```
+
+
+# Gender x age
+
+
+#```{r M.de5_int.age2, cashe=TRUE}
+M.de5_int.age2<-brm(bf(Distr_Eq_int~Gender*Age_num_sd+Education_cat3+Marital_status+wealth2_sd+migrant2+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+#```{r}
+saveRDS(M.de5_int.age2,file="M.de5_int.age2.rda")
+#```
+
+```{r}
+M.de5_int.age2<-readRDS(file="M.de5_int.age2.rda")
+```
+
+
+```{r}
+pars <- M.de5_int.age2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.de5_int.age2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.de5_int.age2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_dist$Distr_Eq_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.de5_int.age2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.de5_int.age2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.de5_int.age2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.de5_int.age2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.de5_int.age2<- as.array(M.de5_int.age2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.de5_int.age2,ndraws=250,summary=FALSE)
+
+M.de5_int.age2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_dist$Distr_Eq_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.de5_int.age2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.de5_int.age2)
+```
+
+
+
+```{r}
+loo.M.de5_int.age2<-loo(M.de5_int.age2)
+```
+
+
+```{r}
+loo.M.de5_int.age2
+```
+
+
+# Gender x wealth
+
+
+#```{r M.de5_int.wealth2, cashe=TRUE}
+M.de5_int.wealth2<-brm(bf(Distr_Eq_int~Gender*wealth2_sd+Age_num_sd+Education_cat3+Marital_status+migrant2+ (1|village)),
+                  data=data_fiji_dist,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+```{r}
+#saveRDS(M.de5_int.wealth2,file="M.de5_int.wealth2.rda")
+```
+
+```{r}
+M.de5_int.wealth2<-readRDS(file="M.de5_int.wealth2.rda")
+```
+
+
+```{r}
+pars <- M.de5_int.wealth2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.de5_int.wealth2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.de5_int.wealth2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_dist$Distr_Eq_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.de5_int.wealth2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.de5_int.wealth2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.de5_int.wealth2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.de5_int.wealth2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.de5_int.wealth2<- as.array(M.de5_int.wealth2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.de5_int.wealth2,ndraws=250,summary=FALSE)
+
+M.de5_int.wealth2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_dist$Distr_Eq_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.de5_int.wealth2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.de5_int.wealth2)
+```
+
+
+
+```{r}
+loo.M.de5_int.wealth2<-loo(M.de5_int.wealth2)
+```
+
+
+```{r}
+loo.M.de5_int.wealth2
+```
+
+
+Compare models
+
+```{r}
+loo_compare(loo.M.de5_int.wealth2,loo.M.de5_int.age2,loo.M.de5_int.edu2,loo.M.de5_int.marital2,loo.M.de5_int.mig2,loo.M.de5_add_2 )
+```
+
+# PROCEDURAL EQUITY
+
+
+
+```{r}
+data_fiji_proced<- within(data_fiji_proced, Education_cat3 <- relevel(Education_cat3, ref = 2)) #set secondary education as the reference category as it has more counts
+
+```
+
+```{r}
+str(data_fiji_proced$Proced_Equity_int)
+```
+
+
+
+
+#```{r }
+M.pe5_acat_all_noed<-brm(bf(Proced_Equity_int~cs(Gender)+cs(migrant2)+cs(Education_cat3)+cs(wealth2_sd)+cs(Age_num_sd)+cs(Marital_status)+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=acat("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+
+```{r}
+#saveRDS(M.pe5_acat_all_noed,file="M.pe5_acat_all_noed.rda")
+```
+
+```{r}
+M.pe5_acat_all_noed<-readRDS(file="M.pe5_acat_all_noed.rda")
+```
+
+
+
+
+```{r}
+M.pe5_acat_all_noed<-loo(M.pe5_acat_all_noed)
+```
+
+#```{r }
+M.pe5_acat_all2<-brm(bf(Proced_Equity_int~Gender+migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=acat("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+```{r}
+#saveRDS(M.pe5_acat_all2,file="M.pe5_acat_all2.rda")
+```
+
+```{r}
+M.pe5_acat_all2<-readRDS(file="M.pe5_acat_all2.rda")
+```
+
+```{r}
+M.pe5_acat_all2<-readRDS(file="M.pe5_acat_all2.rda")
+```
+
+```{r}
+loo.M.pe5_acat_all2<-loo(M.pe5_acat_all2)
+```
+
+
+# Additive model
+
+
+#```{r proced additive model2, cashe=TRUE}
+M.pe5_add_2<-brm(bf(Proced_Equity_int~Gender+migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+```{r}
+#saveRDS(M.pe5_add_2,file="M.pe5_add_2.rda")
+```
+
+```{r}
+M.pe5_add_2<-readRDS(file="M.pe5_add_2.rda")
+```
+
+
+```{r}
+pars <- M.pe5_add_2%>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.pe5_add_2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.pe5_add_2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_proced$Proced_Equity_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.pe5_add_2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.pe5_add_2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.pe5_add_2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.pe5_add_2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.pe5_add_2<- as.array(M.pe5_add_2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.pe5_add_2,ndraws=250,summary=FALSE)
+
+M.pe5_add_2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_proced$Proced_Equity_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.pe5_add_2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.pe5_add_2)
+```
+
+
+
+```{r}
+loo.M.pe5_add_2<-loo(M.pe5_add_2)
+```
+
+
+```{r}
+loo.M.pe5_add_2
+```
+
+
+Compare cumulative and acat
+
+```{r}
+loo_compare(loo.M.pe5_add_2,loo.M.pe5_acat_all2,M.pe5_acat_all_noed)
+```
+
+```{r}
+posterior_M.pe5_add_2<- as.array(M.pe5_add_2)
+```
+
+```{r}
+mcmc_intervals(posterior_M.pe5_add_2, prob = 0.8, # 80% intervals
+  prob_outer = 0.95, # 95%
+  point_est = "mean"
+,pars = c("b_Genderm", "b_migrant22", "b_Education_cat31","b_Education_cat33", "b_wealth2_sd","b_Age_num_sd","b_Marital_statuss","b_Marital_statusw"))
+```
+
+
+
+
+
+# Gender x Migrant
+
+#```{r proced genderxmigrant model2, cashe=TRUE}
+M.pe5_int.mig2<-brm(bf(Proced_Equity_int~Gender*migrant2+Education_cat3+wealth2_sd+Age_num_sd+Marital_status+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+```{r}
+#saveRDS(M.pe5_int.mig2,file="M.pe5_int.mig2.rda")
+```
+
+```{r}
+M.pe5_int.mig2<-readRDS(file="M.pe5_int.mig2.rda")
+```
+
+
+```{r}
+pars <- M.pe5_int.mig2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.pe5_int.mig2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.pe5_int.mig2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_proced$Proced_Equity_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.pe5_int.mig2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.pe5_int.mig2 %>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.pe5_int.mig2 %>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.pe5_int.mig2 %>% mcmc_plot(type='acf_bar')
+```
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.pe5_int.mig2,ndraws=250,summary=FALSE)
+
+M.pe5_int.mig2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_proced$Proced_Equity_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.pe5_int.mig2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.pe5_int.mig2)
+```
+
+```{r}
+loo.M.pe5_int.mig2<-loo(M.pe5_int.mig2)
+```
+
+
+# Gender x marital status
+
+
+#```{r M.pe5_int.marital2, cashe=TRUE}
+M.pe5_int.marital3<-brm(bf(Proced_Equity_int~Gender*Marital_status+Education_cat3+wealth2_sd+Age_num_sd+migrant2+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+#```{r}
+saveRDS(M.pe5_int.marital3,file="M.pe5_int.marital3.rda")
+#```
+
+```{r}
+M.pe5_int.marital3<-readRDS(file="M.pe5_int.marital3.rda")
+```
+
+
+```{r}
+M.pe5_int.marital2<-M.pe5_int.marital3
+```
+
+
+```{r}
+pars <- M.pe5_int.marital2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.pe5_int.marital2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.pe5_int.marital2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <-  data_fiji_proced$Proced_Equity_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.pe5_int.marital2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.pe5_int.marital2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.pe5_int.marital2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.pe5_int.marital2%>% mcmc_plot(type='acf_bar')
+```
+
+
+
+Residual plot:
+
+
+```{r}
+preds<-posterior_predict(M.pe5_int.marital2,ndraws=250,summary=FALSE)
+
+M.pe5_int.marital2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_proced$Proced_Equity_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.pe5_int.marital2.resids) #residuals look good
+
+
+```
+```{r}
+summary(M.pe5_int.marital2)
+```
+
+
+
+```{r}
+loo.M.pe5_int.marital2<-loo(M.pe5_int.marital2)
+```
+
+
+```{r}
+loo.M.pe5_int.marital2
+```
+
+# Gender x education
+
+
+#```{r M.pe5_int.edu2, cashe=TRUE}
+M.pe5_int.edu2<-brm(bf(Proced_Equity_int~Gender*Education_cat3+Marital_status+wealth2_sd+Age_num_sd+migrant2+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+```{r}
+#saveRDS(M.pe5_int.edu2,file="M.pe5_int.edu2.rda")
+```
+
+```{r}
+M.pe5_int.edu2<-readRDS(file="M.pe5_int.edu2.rda")
+```
+
+
+```{r}
+pars <- M.pe5_int.edu2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.pe5_int.edu2%>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.pe5_int.edu2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_proced$Proced_Equity_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.pe5_int.edu2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.pe5_int.edu2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.pe5_int.edu2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.pe5_int.edu2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.pe5_int.edu2<- as.array(M.pe5_int.edu2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.pe5_int.edu2,ndraws=250,summary=FALSE)
+
+M.pe5_int.edu2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_proced$Proced_Equity_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.pe5_int.edu2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.pe5_int.edu2)
+```
+
+
+
+```{r}
+loo.M.pe5_int.edu2<-loo(M.pe5_int.edu2)
+```
+
+
+```{r}
+loo.M.pe5_int.edu2
+```
+
+
+# Gender x age
+
+
+
+#```{r M.pe5_int.age2, cashe=TRUE}
+M.pe5_int.age2<-brm(bf(Proced_Equity_int~Gender*Age_num_sd+Education_cat3+Marital_status+wealth2_sd+migrant2+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#``
+
+
+```{r}
+#saveRDS(M.pe5_int.age2,file="M.pe5_int.age2.rda")
+```
+
+```{r}
+M.pe5_int.age2<-readRDS(file="M.pe5_int.age2.rda")
+```
+
+
+```{r}
+pars <- M.pe5_int.age2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.pe5_int.age2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.pe5_int.age2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_proced$Proced_Equity_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.pe5_int.age2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.pe5_int.age2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.pe5_int.age2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.pe5_int.age2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.pe5_int.age2<- as.array(M.pe5_int.age2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.pe5_int.age2,ndraws=250,summary=FALSE)
+
+M.pe5_int.age2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_proced$Proced_Equity_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.pe5_int.age2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.pe5_int.age2)
+```
+
+
+
+```{r}
+loo.M.pe5_int.age2<-loo(M.pe5_int.age2)
+```
+
+
+```{r}
+loo.M.pe5_int.age2
+```
+
+
+# Gender x wealth
+
+
+#```{r M.de5_int.wealth2, cashe=TRUE}
+M.pe5_int.wealth2<-brm(bf(Proced_Equity_int~Gender*wealth2_sd+Age_num_sd+Education_cat3+Marital_status+migrant2+ (1|village)),
+                  data=data_fiji_proced,
+                  prior=priors2,
+                  sample_prior='yes',
+                  family=cumulative("logit"),
+                  iter=5000,
+                  warmup = 1000,
+                  chains = 4,
+                  cores=4,
+                  thin=5,
+                  refresh=0,
+                  control = list(adapt_delta = 0.99))
+
+#```
+
+
+```{r}
+#saveRDS(M.pe5_int.wealth2,file="M.pe5_int.wealth2.rda")
+```
+
+```{r}
+M.pe5_int.wealth2<-readRDS(file="M.pe5_int.wealth2.rda")
+```
+
+
+```{r}
+pars <- M.pe5_int.wealth2 %>% get_variables()
+wch <- pars %>% stringr::str_detect("^b_((?!Intercept).)*$|^sd_.*") # Using a negative look-around
+g <- purrr::map(pars[wch],
+                ~(M.pe5_int.wealth2 %>%
+                    hypothesis(paste(.x,"=0"), class="") %>%
+                    plot(plot=FALSE))[[1]])
+names(g) <- pars[wch]
+
+patchwork::wrap_plots(g)
+# g %>% sjPlot::plot_grid()
+```
+
+
+PP_check:
+
+```{r}
+ yrep_char <- posterior_predict(M.pe5_int.wealth2)
+```
+
+```{r}
+ yrep_int <- sapply(data.frame(yrep_char, stringsAsFactors = TRUE), as.integer)
+```
+
+```{r}
+ y_int <- data_fiji_proced$Proced_Equity_int
+```
+
+
+```{r}
+ppc_bars(y_int, yrep_int)
+```
+
+
+
+Trace plots:
+
+```{r}
+M.pe5_int.wealth2%>%mcmc_trace
+```
+
+Chain convergence:
+
+```{r}
+M.pe5_int.wealth2%>% mcmc_plot(type='rhat_hist')
+```
+
+```{r}
+M.pe5_int.wealth2%>% mcmc_plot(type='neff_hist')
+```
+
+Autocorrelation
+
+```{r}
+M.pe5_int.wealth2%>% mcmc_plot(type='acf_bar')
+```
+
+
+```{r}
+posterior_M.pe5_int.wealth2<- as.array(M.pe5_int.wealth2)
+```
+
+
+Residual plot:
+
+```{r}
+preds<-posterior_predict(M.pe5_int.wealth2,ndraws=250,summary=FALSE)
+
+M.pe5_int.wealth2.resids<-createDHARMa(simulatedResponse = t(preds),
+                                 observedResponse = data_fiji_proced$Proced_Equity_int,
+                                 fittedPredictedResponse = apply(preds,2,median),
+                                 # 2 = we tell R to take preds and apply it tothe rows (1) or to the columns (2)
+                                 integerResponse = FALSE)
+plot(M.pe5_int.wealth2.resids) #residuals look good
+
+
+```
+
+```{r}
+summary(M.pe5_int.wealth2)
+```
+
+
+
+```{r}
+loo.M.pe5_int.wealth2<-loo(M.pe5_int.wealth2)
+```
+
+
+```{r}
+loo.M.pe5_int.wealth2
+```
+
+
+Compare models
+
+```{r}
+loo_compare(loo.M.pe5_int.wealth2,loo.M.pe5_int.age2,loo.M.pe5_int.edu2,loo.M.pe5_int.marital2,loo.M.pe5_int.mig2,loo.M.pe5_add_2 )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

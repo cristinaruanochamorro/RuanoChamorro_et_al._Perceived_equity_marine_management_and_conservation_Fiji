@@ -1,0 +1,814 @@
+---
+title: "Script Likert plots equity Fiji"
+author: ""
+date: '2022-04-28'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#####Load packages
+
+```{r}
+#load packages
+
+#library(tidyverse) #there is an error with tidyverse
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(devtools)
+library(stats)
+library(ordinal)
+library(MASS)
+library(ggeffects)
+library(effects)
+library(scales)
+#library(car) #for regression diagnostics
+#library(broom) #for tidy output
+#library(ggfortify) #for model diagnostics
+#library(sjPlot) #for outputs
+library(knitr) #for kable
+#library(effects) #for partial effects plots
+#library(MuMIn) #for interfacing with STAN
+#library(emmeans) #for estimating marginal means
+#library(ggeffects) #for partial effects plots
+#library(MASS) #for glm.nb
+#library(MuMIn) #for AICc
+#library(DHARMa) #for residual diagnostics plots
+#library(modelr) #for auxillary modelling functions
+#library(performance) #for residuals diagnostics
+#library(see) #for plotting residuals
+library(patchwork) #for grids of plots
+#library(brms)
+#library(bayesplot)
+library(coda)
+#library(ggmcmc)
+#library(broom) #for tidying outputs
+library(tidybayes) #for more tidying outputs
+#library(broom.mixed)#for summarising models
+library(knitr)
+library(likert)
+
+```
+
+
+#Arranging data set
+
+Data 2016, treatment and control communities.
+
+Change name of the data set
+#```{r}
+
+data_fiji<-Fiji_data_notabu_2016_4
+
+#```
+
+```{r}
+
+data_fiji<- read.csv ("Fiji_data_notabu_2016.4.csv",
+                     header=TRUE,
+                    dec=".")
+
+```
+
+
+Transform variables into factors (District, control/treatment)
+
+
+```{r}
+
+data_fiji$district<-as.factor(data_fiji$district) #district as factor
+levels(data_fiji$district)
+
+data_fiji$village<-as.factor(data_fiji$village) #village as factor
+levels(data_fiji$village)
+
+str(data_fiji$PES_exp)
+data_fiji$PES_exp<-as.factor(data_fiji$PES_exp) #control and treatment as factor
+levels(data_fiji$PES_exp)# two leveles (control and treatment)
+
+
+dim(data_fiji) # n=193
+```
+
+COVARIATES:
+
+AGE
+
+```{r}
+#Age (nominal)
+
+str(data_fiji$Age)
+
+ggplot(data_fiji,aes(Age))+geom_bar()
+
+data_fiji$Age_num<-as.numeric(as.character(data_fiji$Age)) 
+
+hist(data_fiji$Age_num) 
+```
+
+
+
+MIGRANT 
+
+```{r}
+#Migrant status (Categorical)
+
+str(data_fiji$Migrant)
+
+#transform in factor
+data_fiji$Migrant<-as.factor(data_fiji$Migrant)
+str(data_fiji$Migrant)
+
+#Combine Migrant levels 2,3 and 4
+
+data_fiji$Migrant<-as.numeric(as.character( data_fiji$Migrant))
+str(data_fiji$Migrant)
+
+data_fiji$migrant2 <- as.factor(ifelse(data_fiji$Migrant > 1,2,1)) 
+
+ggplot(data_fiji,aes(Migrant))+geom_bar()
+ggplot(data_fiji,aes(migrant2))+geom_bar()
+
+
+```
+
+```{r}
+#Years living in the village
+
+str(data_fiji$Years_village)
+
+ggplot(data_fiji,aes(Years_village))+geom_bar()
+
+
+```
+
+
+```{r}
+#Gender
+
+ggplot(data_fiji,aes(Gender))+geom_bar()
+
+str(data_fiji$Gender)
+
+data_fiji$Gender<-as.factor(data_fiji$Gender)
+
+
+```
+
+```{r}
+#Marital status
+
+ggplot(data_fiji,aes(Marital_status))+geom_bar()
+
+str(data_fiji$Marital_status)
+
+data_fiji$Marital_status<-as.factor(data_fiji$Marital_status)
+
+
+```
+
+
+
+```{r}
+#Education 
+
+str(data_fiji$Education)
+
+data_fiji$Education<-as.factor(data_fiji$Education)
+str(data_fiji$Education)
+ggplot(data_fiji,aes(Education))+geom_bar()
+
+data_fiji$Education_num<-as.factor(ifelse(data_fiji$Education == "Primary",1,
+                                                   ifelse(data_fiji$Education=="Secondary",2,
+                                                          ifelse(data_fiji$Education=="Tertiary",3,0))))
+
+
+ggplot(data_fiji,aes(Education_num))+geom_bar()
+
+data_fiji$Education_num<-as.numeric(as.character(data_fiji$Education_num))
+
+str(data_fiji$Education_num)
+
+#Transform in Primary, secondary and tertiary
+
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary-F5" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary-F6" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary - F1" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Secondary - F4" = "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "primary" = "Primary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "secondary"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "tertiary"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 4"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 3"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 5"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 6"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Form 7"= "Tertiary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 2"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 5"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 6"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 7"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "class 7"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "class 5"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "class 8"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Class 8"= "Secondary")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "0"= "None")
+levels(data_fiji$Education)
+data_fiji$Education<-recode_factor(data_fiji$Education, "Intermediate"= "Primary") #assuming intermediate is secondary. CHECKK!!!
+levels(data_fiji$Education)
+ggplot(data_fiji,aes(Education))+geom_bar()
+
+
+```
+
+
+
+```{r}
+data_fiji$Education_cat3<-as.factor(ifelse(data_fiji$Education == "Tertiary",3,
+                                                   ifelse(data_fiji$Education=="Secondary",2,1)))
+                                                          
+
+
+```
+
+Wealth
+
+I have calculated wealth using all assets and chose the one with loading factors higher than 0.4 (Gurney and Darling 2017. A Global Social-Ecological Systems Monitoring Framework for Coastal Fisheries Management: A Practical Monitoring Handbook)
+
+
+calculate wealth (Material lifestyle)
+
+
+
+```{r}
+#dvd
+str(data_fiji$dvd)
+data_fiji$dvd<-as.factor(data_fiji$dvd)
+ggplot(data_fiji,aes(dvd))+geom_bar()
+which(is.na(data_fiji$dvd))
+
+
+#washing
+str(data_fiji$washing)
+data_fiji$washing<-as.factor(data_fiji$washing)
+ggplot(data_fiji,aes(washing))+geom_bar()
+which(is.na(data_fiji$washing))
+#computer
+str(data_fiji$computer)
+data_fiji$computer<-as.factor(data_fiji$computer)
+ggplot(data_fiji,aes(computer))+geom_bar()
+which(is.na(data_fiji$computer))
+#fridge
+str(data_fiji$fridge)
+data_fiji$fridge<-as.factor(data_fiji$fridge)
+ggplot(data_fiji,aes(fridge))+geom_bar()
+which(is.na(data_fiji$fridge))
+#tv
+str(data_fiji$tv)
+data_fiji$tv<-as.factor(data_fiji$tv)
+ggplot(data_fiji,aes(tv))+geom_bar()
+which(is.na(data_fiji$tv))
+#satellite
+str(data_fiji$satellite)
+data_fiji$satellite<-as.factor(data_fiji$satellite)
+ggplot(data_fiji,aes(satellite))+geom_bar()
+data_fiji<-data_fiji%>% 
+  mutate(satellite=na_if(satellite, "no answer"))
+which(is.na(data_fiji$satellite))#187 is missing
+
+
+#recode rest of the variables
+
+data_fiji$dvd<-recode_factor(data_fiji$dvd,"y" ="1")
+data_fiji$dvd<-recode_factor(data_fiji$dvd,"n" ="0")
+
+data_fiji$smartphone<-recode_factor(data_fiji$smartphone,"y" ="1")
+data_fiji$smartphone<-recode_factor(data_fiji$smartphone,"n" ="0")
+
+data_fiji$washing<-recode_factor(data_fiji$washing,"y" ="1")
+data_fiji$washing<-recode_factor(data_fiji$washing,"n" ="0")
+
+data_fiji$fridge<-recode_factor(data_fiji$fridge,"y" ="1")
+data_fiji$fridge<-recode_factor(data_fiji$fridge,"n" ="0")
+
+data_fiji$tv<-recode_factor(data_fiji$tv,"y" ="1")
+data_fiji$tv<-recode_factor(data_fiji$tv,"n" ="0")
+
+data_fiji$satellite<-recode_factor(data_fiji$satellite,"y" ="1")
+data_fiji$satellite<-recode_factor(data_fiji$satellite,"n" ="0")
+
+#transform variable into numeric vars
+data_fiji$dvd<-as.numeric(as.character(data_fiji$dvd))
+which(is.na(data_fiji$dvd))
+data_fiji$washing<-as.numeric(as.character(data_fiji$washing))
+which(is.na(data_fiji$washing))
+data_fiji$fridge<-as.numeric(as.character(data_fiji$fridge))
+which(is.na(data_fiji$fridge))
+data_fiji$tv<-as.numeric(as.character(data_fiji$tv))
+which(is.na(data_fiji$tv))
+data_fiji$satellite<-as.numeric(as.character(data_fiji$satellite))
+which(is.na(data_fiji$satellite)) #missing 187
+
+
+#PCA 18 only have one missing value.
+
+data_fiji<-data_fiji[-c(187),]
+wealth_rows_pca18.2= data_fiji[, c("dvd", "washing","fridge","tv", "satellite")]
+xord18.2<-prcomp(wealth_rows_pca18.2, center= TRUE, scale=TRUE)
+
+summary(xord18.2)
+
+biplot(xord18.2)
+
+
+loadings18.2<-xord18.2$rotation #rotation is the matrix of variable loadings (columns are eigenvectors) in prcomp() function
+loadings18.2 
+
+
+
+#extract pc1
+
+
+myscores.2<-xord18.2$x # "x" are the coordinates of the individuals (observations) on the principal components in prcomp()
+
+data_fiji$wealth_msl.2<-myscores.2[,"PC1"] #add this to fiji_data and add na to the empty cells
+
+data_fiji$wealth_msl.2
+
+
+
+str(data_fiji$wealth_msl.2)
+
+data_fiji$wealth_msl.2_sc.1<-scale( data_fiji$wealth_msl.2, center = TRUE,scale=TRUE)
+
+
+data_fiji$wealth_msl.2.resc<- rescale(data_fiji$wealth_msl.2, to = c(0,1)) #rescale
+
+hist(data_fiji$wealth_msl.2)
+
+
+```
+
+
+```{r}
+hist(data_fiji$wealth_msl.2.resc)
+```
+
+
+```{r}
+data_fiji$wealth2<-data_fiji$wealth_msl.2.resc
+```
+
+
+```{r}
+#gender (Gender) 
+str(data_fiji$Gender)
+#marital status
+str(data_fiji$Marital_status)
+#age (Age)
+str(data_fiji$Age_num)
+hist(data_fiji$Age_num)
+#migrant status (migrant2)
+str(data_fiji$migrant2)
+#years in the village
+str(data_fiji$Years_village)
+#education (Education)
+str(data_fiji$Education)
+str(data_fiji$Education_cat3)
+#wealth
+str(data_fiji$wealth_msl.2)
+str(data_fiji$wealth2)
+
+```
+
+
+Standardize
+
+
+```{r}
+
+# Scale all "numerical" variables from 0 to 1
+#migrant: binomial
+
+#data_fiji$n_children_sd <- scale(data_fiji$n_children)*0.5
+data_fiji$wealth2_sd <- scale(data_fiji$wealth2)*0.5
+data_fiji$Years_village_sd<-scale(data_fiji$Years_village)*0.5
+data_fiji$Age_num_sd <- scale(data_fiji$Age_num)*0.5
+
+```
+
+Save data with previous steps
+```{r}
+#write.csv(data_fiji,'data_fiji2.2.csv')
+```
+
+
+
+RESPONSE VARIABLES
+
+I am going to create a data set for procedural equity and another one for distributional equity to avoid the elimnations of nas in procedural equity resulting from nas occuring only in disributional equity and viceversa.
+
+DISTRIBUTIONAL EQUITY
+
+```{r}
+ggplot(data_fiji, aes(Distr_Eq_Impact))+geom_bar()
+```
+
+
+
+Eliminate NA and don't knows (including 6), and noanswer
+```{r}
+data_fiji_dist <- data_fiji[data_fiji$Distr_Eq_Impact!=6,]
+
+data_fiji_dist <- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!=7,]
+
+data_fiji_dist <- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!="dontknow",]
+
+data_fiji_dist<- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!="noanswer",]
+
+which(is.na(data_fiji_dist$Distr_Eq_Impact))
+
+data_fiji_dist <- data_fiji_dist[data_fiji_dist$Distr_Eq_Impact!="na",]
+
+```
+```{r}
+ggplot(data_fiji_dist, aes(Distr_Eq_Impact))+geom_bar()
+```
+
+```{r}
+ggplot(data_fiji_dist, aes(Distr_Eq_Impact,fill=Gender))+geom_bar()+theme_classic()
+  
+
+```
+
+```{r}
+dim(data_fiji_dist)
+```
+
+```{r}
+which(is.na(data_fiji_dist$Age_num_sd))
+```
+
+There in 1 NA in age withing data_fiji_dist.
+
+```{r}
+data_fiji_dist<-data_fiji_dist[-c(43),]
+```
+
+
+```{r}
+str(data_fiji_dist$Distr_Eq_Impact)
+```
+
+```{r}
+data_fiji_dist$Distr_Eq_Impact_int<-as.integer(data_fiji_dist$Distr_Eq_Impact)
+```
+
+```{r}
+str(data_fiji_dist$Distr_Eq_Impact_int)
+```
+
+
+
+Likert plot
+
+```{r}
+data_fiji_dist$Distr_Eq_Impact_cat<-as.factor(ifelse(data_fiji_dist$Distr_Eq_Impact==1,"Very unfair",
+                               ifelse(data_fiji_dist$Distr_Eq_Impact==2, "Unfair",
+                                      ifelse(data_fiji_dist$Distr_Eq_Impact==3, "Neutral",
+                                             ifelse(data_fiji_dist$Distr_Eq_Impact==4, "Fair","Very fair")))))
+                                      
+```
+
+```{r}
+gender_summary<-data_fiji_dist%>%
+  group_by(Gender)%>%
+  count(name="n_answers")
+```
+
+```{r}
+gender_summary
+```
+
+```{r}
+edu_summary<-data_fiji_dist%>%
+  group_by(Education_cat3)%>%
+  count(name="n_answers")
+```
+
+```{r}
+mar_summary<-data_fiji_dist%>%
+  group_by(Marital_status)%>%
+  count(name="n_answers")
+```
+
+```{r}
+genmig_summary<-data_fiji_dist%>%
+  group_by(Gender,migrant2)%>%
+  count(name="n_answers")
+```
+
+```{r}
+genmar_summary<-data_fiji_dist%>%
+  group_by(Gender,Marital_status)%>%
+  count(name="n_answers")
+```
+
+```{r}
+genedu_summary<-data_fiji_dist%>%
+  group_by(Gender,Education_cat3)%>%
+  count(name="n_answers")
+```
+
+```{r}
+
+de_summary<-data_fiji_dist%>%
+  group_by(Gender, Distr_Eq_Impact_cat)%>%
+  count(name="n_answers")%>%
+  group_by(Gender)
+#%>%
+  #mutate(percent_answers=n_answers/sum(n_answers))%>%
+  #ungroup()%>%
+#mutate(percent_answers_label = percent(percent_answers,accuracy=1))
+  
+
+```
+wide format
+
+```{r}
+de_summary
+```
+
+
+    ```{r}
+de_gender_wide<-de_summary%>% 
+    pivot_wider(names_from = Distr_Eq_Impact_cat, values_from =n_answers)
+    
+```
+
+
+    ```{r}
+de_gender_wide
+    
+```
+
+    ```{r}
+col_order<-c("Gender","Very unfair", "Unfair", "Neutral", "Fair", "Very fair")
+    
+```
+
+    ```{r}
+de_gender_wide_or<-de_gender_wide[,col_order]
+    
+```
+
+
+    ```{r}
+de_gender_wide_or
+    
+```
+
+
+```{r}
+
+HH::likert(Gender~.,data=de_gender_wide_or, ylab=NULL, ReferenceZero=3,as.percent=TRUE,
+           main = list("Distributional Equity"))
+         
+           
+```
+
+```{r}
+
+plot_de<-HH::likert(Gender~.,data=de_gender_wide_or, ylab=NULL, ReferenceZero=3,as.percent=TRUE,
+           main = list("Distributional Equity"))
+         
+           
+```
+
+```{r}
+Gender<-c("Women", "Men")
+Very_unfair<-c(3,3)
+Unfair<-c(13,11)
+Neutral<-c(10,3)
+Fair<-c(35,40)
+Very_fair<-c(16,23)
+
+df_dist_eq<-data.frame(Gender, Very_unfair, Unfair, Neutral, Fair, Very_fair)
+print(df_dist_eq)
+
+```
+
+```{r}
+
+HH::likert(Gender~.,data=df_dist_eq, ylab=NULL, ReferenceZero=3, as.percent=TRUE,
+           main = list("Distributional Equity"))
+         
+           
+```
+
+
+
+
+PROCEDURAL EQUITY
+
+```{r}
+ggplot(data_fiji, aes(Proced_Equity))+geom_bar()
+```
+
+
+
+Eliminate NA and don't knows (including 6), and noanswer
+```{r}
+data_fiji_proced <- data_fiji[data_fiji$Proced_Equity!=6,]
+
+data_fiji_proced <- data_fiji_proced[data_fiji_proced$Proced_Equity!="dontknow",]
+
+data_fiji_proced<- data_fiji_proced[data_fiji_proced$Proced_Equity!="noanswer",]
+
+which(is.na(data_fiji_proced$Proced_Equity))
+
+data_fiji_proced<- data_fiji_proced[data_fiji_proced$Proced_Equity!="na",]
+
+```
+
+
+
+
+```{r}
+ggplot(data_fiji_proced, aes(Proced_Equity))+geom_bar()
+```
+
+
+
+```{r}
+dim(data_fiji_proced)
+```
+
+
+
+```{r}
+str(data_fiji_proced$Proced_Equity)
+```
+```{r}
+data_fiji_proced$Proced_Equity_int<-as.integer(data_fiji_proced$Proced_Equity)
+```
+
+
+```{r}
+str(data_fiji_proced$Proced_Equity_int)
+```
+
+
+Likert plot
+
+
+
+
+```{r}
+data_fiji_proced$Proced_Equity_cat<-as.factor(ifelse(data_fiji_proced$Proced_Equity_int==1,"Very unfair",
+                               ifelse(data_fiji_proced$Proced_Equity_int==2, "Unfair",
+                                      ifelse(data_fiji_proced$Proced_Equity_int==3, "Neutral",
+                                             ifelse(data_fiji_proced$Proced_Equity_int==4, "Fair","Very fair")))))
+                                      
+```
+
+```{r}
+
+pe_summary<-data_fiji_proced%>%
+  group_by(Gender, Proced_Equity_cat)%>%
+  count(name="n_answers")%>%
+  group_by(Gender)
+#%>%
+  #mutate(percent_answers=n_answers/sum(n_answers))%>%
+  #ungroup()%>%
+#mutate(percent_answers_label = percent(percent_answers,accuracy=1))
+  
+
+```
+
+```{r}
+
+pe_summary
+  
+
+```
+
+```{r}
+gen_summary<-data_fiji_proced%>%
+   group_by(Gender)%>%
+   count(name="n_answers")
+
+```
+
+```{r}
+mig_summary<-data_fiji_proced%>%
+   group_by(migrant2)%>%
+   count(name="n_answers")
+
+```
+
+```{r}
+mar_summary<-data_fiji_proced%>%
+   group_by(Marital_status)%>%
+   count(name="n_answers")
+
+```
+
+```{r}
+edu_summary<-data_fiji_proced%>%
+   group_by(Education_cat3)%>%
+   count(name="n_answers")
+
+```
+
+```{r}
+genmig_summary<-data_fiji_proced%>%
+   group_by(Gender,migrant2)%>%
+   count(name="n_answers")
+
+```
+
+```{r}
+genmar_summary<-data_fiji_proced%>%
+   group_by(Gender,Marital_status)%>%
+   count(name="n_answers")
+
+```
+
+```{r}
+gened_summary<-data_fiji_proced%>%
+   group_by(Gender,Education_cat3)%>%
+   count(name="n_answers")
+
+```
+
+    ```{r}
+pe_gender_wide<-pe_summary%>% 
+    pivot_wider(names_from = Proced_Equity_cat, values_from =n_answers)
+    
+```
+
+
+    ```{r}
+pe_gender_wide
+    
+```
+
+
+    ```{r}
+pe_gender_wide_or<-pe_gender_wide[,col_order]
+    
+```
+
+```{r}
+
+HH::likert(Gender~.,data=pe_gender_wide_or, ylab=NULL, ReferenceZero=3, as.percent=TRUE,main = list("Procedural Equity"))
+         
+           
+```
+
+
+
+```{r}
+
+plot_pe<-HH::likert(Gender~.,data=pe_gender_wide_or, ylab=NULL, ReferenceZero=3, as.percent=TRUE,main = list("Procedural Equity"))
+         
+           
+```
+
+
+
+
+```{r}
+ library(ggpubr)          
+```
+
+
+
+```{r}
+    ggarrange(plot_de,plot_pe, ncol = 1, nrow = 2,
+          labels = c("A", "B"))
+```
+

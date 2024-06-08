@@ -1,0 +1,404 @@
+---
+title: "Winners and losers_Fiji_20.12.22"
+author: 
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#####Load packages
+
+```{r}
+
+#load packages
+
+#library(tidyverse) #there is an error with tidyverse
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(devtools)
+library(stats)
+library(MASS)
+library(knitr) #for kable
+
+```
+
+
+#Arranging data set
+
+```{r}
+
+winners_losers_fiji<- read.csv ("winners_losers_FIJI_20_12_22.csv",
+                     header=TRUE,
+                    dec=".")
+
+```
+
+#```{r}
+
+winners_losers_fiji<-winners_losers_FIJI_20_12_22
+#```
+
+```{r}
+winners_losers_fiji$Winners_2<-as.factor(winners_losers_fiji$Winners_2)
+```
+
+```{r}
+ggplot(winners_losers_fiji,aes(Winners_2))+geom_bar()+coord_flip()+theme_classic()
+```
+```{r}
+table<-xtabs(~Winners_2+village, data=winners_losers_fiji)
+#ftable(table)
+table2<-ftable(table)
+```
+
+
+
+```{r}
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Vitawa village"= "Other villages")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Nerby villages"= "Other villages")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Navuniivi and Nayaunura"= "Other villages")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Narewa village"= "Other villages")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Villages"= "Community")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Everyone"= "Community")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Vatu-i-Ra owners"= "Clan")
+winners_losers_fiji$Winners_2<-recode_factor(winners_losers_fiji$Winners_2,  "Nakorotubu"= "Nakorotubu district")
+```
+
+```{r}
+ggplot(winners_losers_fiji,aes(Winners_2))+geom_bar()+coord_flip()+theme_classic()
+```
+```{r}
+table<-xtabs(~Winners_2+village, data=winners_losers_fiji)
+#ftable(table)
+table2<-ftable(table)
+```
+
+
+```{r}
+dim(winners_losers_fiji)
+```
+```{r}
+winners_losers_fiji_w<-subset(winners_losers_fiji,Winners_2!="Repeated")
+
+```
+
+```{r}
+dim(winners_losers_fiji_w)
+```
+```{r}
+winners_losers_fiji_w<-winners_losers_fiji_w[!is.na(winners_losers_fiji_w$Winners_2),]#eliminate NAs 
+```
+
+```{r}
+dim(winners_losers_fiji_w)
+```
+
+
+```{r}
+winners_losers_fiji_w<-subset(winners_losers_fiji_w,Winners_2!="NA")
+```
+
+```{r}
+dim(winners_losers_fiji_w)
+```
+
+
+
+```{r}
+table<-xtabs(~Winners_2+village, data=winners_losers_fiji_w)
+#ftable(table)
+table2<-ftable(table)
+```
+
+```{r}
+dim(winners_losers_fiji_w)#174 without repeated and NAs. Number of responses
+```
+
+
+
+```{r}
+ggplot(winners_losers_fiji_w,aes(Winners_2))+geom_bar()+coord_flip()+theme_classic()
+```
+
+
+
+eliminate don't know
+```{r}
+winners_losers_fiji_w<-subset(winners_losers_fiji_w,Winners_2!="DK")
+```
+
+```{r}
+dim(winners_losers_fiji_w)# 169 without dk
+```
+
+
+```{r}
+winners_losers_fiji_w %>% 
+  #filter(!is.na(Winners_2)) %>% 
+ ggplot(aes(Winners_2))+geom_bar(aes(y=((..count..)/169)*100))+ theme(axis.text.x = element_text(angle = 90))+coord_flip()+theme_classic()
+```  
+```{r}
+winners_losers_fiji_w$Winners_2<-factor(winners_losers_fiji_w$Winners_2, levels = c("Elders", "Clan", "Family", "Leaders", "Nakorotubu district", "Other villages","Women", "No one", "Fishers", "Poachers", "Community"))
+
+```
+
+```{r}
+winners_losers_fiji_w %>% 
+  filter(!is.na(Winners_2)) %>% 
+ ggplot(aes(Winners_2))+geom_bar(aes(y=((..count..)/169)*100))+ theme(axis.text.x = element_text(angle = 90))+coord_flip()+theme_classic()+theme(
+  
+  axis.text.y = element_text(size = 12))
+```
+
+
+```{r}
+winners_losers_fiji_2<- group_by(winners_losers_fiji_w) %>%
+             mutate(group_size = n()) %>%
+             group_by(Winners_2) %>%
+             summarise((perc = n()/max(group_size))*100)
+  
+  
+```
+
+
+
+```{r}
+winners_losers_fiji_2
+```
+
+Difference between women and men
+
+
+```{r}
+winners_losers_fiji_2_gen<- group_by(winners_losers_fiji_w, Gender) %>%# here we calculate the percentage of women of all women  who mentioned X category (women #respondents are 100%, and the same for men)
+             mutate(group_size = n()) %>%
+             group_by(Gender, Winners_2) %>%
+             summarise(perc = (n()/max(group_size))*100)
+```
+```{r}
+winners_losers_fiji_2_gen
+```
+
+```{r}
+ggplot(winners_losers_fiji_2_gen, aes(x = Winners_2, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+```{r}
+winners_losers_fiji_2_gen %>% 
+  filter(!is.na(Winners_2)) %>% 
+ggplot(aes(x = Winners_2, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+
+```{r}
+winners_losers_fiji_2_gen2<-winners_losers_fiji_w %>%
+             mutate(group_size = n()) %>%
+             group_by(Gender, Winners_2) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+
+
+```{r}
+winners_losers_fiji_2_gen2
+```
+
+```{r}
+ggplot(winners_losers_fiji_2_gen2, aes(x = Winners_2, y = perc,fill=Gender)) + #here all respondents are 100%
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+```{r}
+winners_losers_fiji_2_gen2 %>% 
+  filter(!is.na(Winners_2)) %>% 
+ggplot(aes(x = Winners_2, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+
+```{r}
+winners_losers_fiji_2_gen2<-winners_losers_fiji_2_gen2%>%
+  pivot_wider(names_from=Gender, values_from=perc,values_fill = 0)
+```
+
+
+```{r}
+winners_losers_fiji_2_gen2
+```
+
+```{r}
+winners_losers_fiji_2_gen2$gend_dif<-(winners_losers_fiji_2_gen2$f-winners_losers_fiji_2_gen2$m)
+```
+
+```{r}
+winners_losers_fiji_2_gen2%>%
+  filter(!is.na(Winners_2)) %>% 
+  ggplot(aes(x = Winners_2, y = gend_dif)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()+ scale_y_continuous(limits = c(-5, 7.5))
+```
+
+
+#losers
+
+
+```{r}
+ggplot(winners_losers_fiji,aes(Losers_2))+geom_bar()+coord_flip()+theme_classic()
+```
+
+
+```{r}
+winners_losers_fiji$Losers_2<-recode_factor(winners_losers_fiji$Losers_2,  "Yaubula Committee"="Committee")
+winners_losers_fiji$Losers_2<-recode_factor(winners_losers_fiji$Losers_2,  "Narewa Village"="Other villages")
+winners_losers_fiji$Losers_2<-recode_factor(winners_losers_fiji$Losers_2,  "Nakorotubu"="Nakorotubu district")
+winners_losers_fiji$Losers_2<-recode_factor(winners_losers_fiji$Losers_2,  "Everyone"="Community")
+```
+
+```{r}
+ggplot(winners_losers_fiji,aes(Losers_2))+geom_bar()+coord_flip()+theme_classic()
+```
+```{r}
+dim(winners_losers_fiji)
+```
+```{r}
+winners_losers_fiji_l<-subset(winners_losers_fiji,Losers_2!="Repeated")
+
+```
+
+```{r}
+dim(winners_losers_fiji_l)
+```
+```{r}
+winners_losers_fiji_l<-winners_losers_fiji_l[!is.na(winners_losers_fiji_l$Losers_2),]#eliminate NAs 
+```
+
+```{r}
+dim(winners_losers_fiji_l)
+```
+
+
+```{r}
+winners_losers_fiji_l<-subset(winners_losers_fiji_l,Losers_2!="NA")
+```
+
+```{r}
+dim(winners_losers_fiji_l)
+```
+```{r}
+ggplot(winners_losers_fiji_l,aes(Losers_2))+geom_bar()+coord_flip()+theme_classic()
+```
+
+
+
+
+```{r}
+table<-xtabs(~Losers_2+village, data=winners_losers_fiji_l)
+#ftable(table)
+table2<-ftable(table)
+```
+eliminate don't know
+```{r}
+winners_losers_fiji_l<-subset(winners_losers_fiji_l,Losers_2!="DK")
+```
+
+```{r}
+dim(winners_losers_fiji_l)# 153 without dk
+```
+
+
+```{r}
+winners_losers_fiji_l$Losers_2<-factor(winners_losers_fiji_l$Losers_2, levels = c("Divers", "Youth", "Few villages", "Other villages",  "Nakorotubu district","Fishers", "Committee", "Community", "Women", "No one"))
+
+```
+
+
+
+```{r}
+winners_losers_fiji_3<- group_by(winners_losers_fiji_l) %>%
+             mutate(group_size = n()) %>%
+             group_by(Losers_2) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+
+
+```{r}
+winners_losers_fiji_3
+```
+
+
+
+```{r}
+winners_losers_fiji_3%>% 
+  filter(!is.na(Losers_2)) %>% 
+ggplot(aes(x = Losers_2, y = perc)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()+theme(
+  
+  axis.text.y = element_text(size = 12))
+```
+
+
+```{r}
+winners_losers_fiji_l_gen<-winners_losers_fiji_l %>%
+             mutate(group_size = n()) %>%
+             group_by(Gender, Losers_2) %>%
+             summarise(perc = (n()/max(group_size))*100)
+  
+  
+```
+
+
+```{r}
+winners_losers_fiji_l_gen
+```
+
+```{r}
+winners_losers_fiji_l_gen$Gender<-as.factor(winners_losers_fiji_l_gen$Gender)
+```
+
+
+```{r}
+winners_losers_fiji_l_gen %>% 
+  filter(!is.na(Losers_2)) %>% 
+ggplot(aes(x = Losers_2, y = perc,fill=Gender)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
+
+
+
+```{r}
+winners_losers_fiji_l_gen<-winners_losers_fiji_l_gen%>%
+  pivot_wider(names_from=Gender, values_from=perc,values_fill = 0)
+```
+
+
+```{r}
+winners_losers_fiji_l_gen
+```
+
+```{r}
+winners_losers_fiji_l_gen$gend_dif<-(winners_losers_fiji_l_gen$f-winners_losers_fiji_l_gen$m)
+```
+
+```{r}
+winners_losers_fiji_l_gen%>%
+  filter(!is.na(Losers_2)) %>% 
+  ggplot(aes(x = Losers_2, y = gend_dif)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.y = element_text(size = 10))+coord_flip()+theme_classic()
+```
